@@ -48,6 +48,11 @@
         this.currentStroke = null;
     }
 
+    undo() {
+        this.strokes.pop();
+        this.renderAll();
+    }
+
     clear() {
         this.strokes = [];
         this.renderAll();
@@ -78,7 +83,10 @@
                 this.ctx.beginPath();
                 this.ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
                 this.ctx.fillStyle = gradient;
+                this.ctx.shadowBlur = 20;
+                this.ctx.shadowColor = stroke.color;
                 this.ctx.fill();
+                this.ctx.shadowBlur = 0;
                 
                 // Outline to make it pop like the screenshot
                 this.ctx.strokeStyle = "rgba(0,0,0,0.5)";

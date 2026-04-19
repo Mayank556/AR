@@ -219,6 +219,13 @@ function App() {
         <i className="fa-solid fa-arrow-rotate-right"></i>
       </div>
 
+      <div id="drawing-tools" style={{ display: !is3DMode ? "flex" : "none", position: "absolute", top: "80px", left: "20px", zIndex: 10, gap: "15px", flexDirection: "column", background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "10px" }}>
+        <label style={{color:"white", fontSize:"12px"}}>Brush Color</label>
+        <input type="color" defaultValue="#8b5a2b" onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.color = e.target.value; }} style={{width:"40px", height:"40px", borderRadius:"50%", border:"none", cursor:"pointer"}}/>
+        <label style={{color:"white", fontSize:"12px"}}>Brush Size</label>
+        <input type="range" min="2" max="40" defaultValue="12" onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.size = parseInt(e.target.value); }} />
+        <button className="action-btn" onClick={() => drawingSystemRef.current?.undo()} style={{padding: "5px 10px", fontSize: "14px"}}>Undo Last</button>
+      </div>
       <div id="bottom-bar">
       <div id="shape-bar" style={{ display: is3DMode ? 'flex' : 'none', position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, gap: '10px' }}>
           <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('house', 0xffbbaaa)}>House</button>

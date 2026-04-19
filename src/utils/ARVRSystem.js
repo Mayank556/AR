@@ -12,9 +12,28 @@ export default class ARVRSystem {
         
         this.renderer = new THREE.WebGLRenderer({ canvas: this.threeCanvas, alpha: true, antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Immersive AR Grid Floor
+        const grid = new THREE.GridHelper(500, 100, 0x888888, 0x444444);
+        grid.position.y = -10;
+        grid.material.opacity = 0.5;
+        grid.material.transparent = true;
+        this.scene.add(grid);
         
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(100, 200, 50);
+        light.castShadow = true;
+        light.shadow.mapSize.width = 2048;
+        light.shadow.mapSize.height = 2048;
+        light.shadow.camera.near = 0.5;
+        light.shadow.camera.far = 500;
+        const d = 150;
+        light.shadow.camera.left = -d;
+        light.shadow.camera.right = d;
+        light.shadow.camera.top = d;
+        light.shadow.camera.bottom = -d;
         this.scene.add(light);
         this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
@@ -184,6 +203,16 @@ export default class ARVRSystem {
 
         mesh.position.set(position.x, position.y, position.z);
         this.group.add(mesh);
+        mesh.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                // Upgrade to premium physical-like materials
+                if (child.material) {
+                    child.material.shininess = 100;
+                }
+            }
+        });
         this.objects3D.push(mesh);
     }
 }
