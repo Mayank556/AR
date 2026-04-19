@@ -68,17 +68,31 @@ function App() {
   }, []);
 
   // Handle stream from camera
-  const startCam = () => {
+  const startCam = async () => {
     if (window.camStream) window.camStream.getTracks().forEach(t => t.stop());
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: isFrontCam ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-    }).then(stream => {
-      window.camStream = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => videoRef.current.play();
-      }
-    }).catch(e => console.error("Camera error:", e));
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: isFrontCam ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        window.camStream = stream;
+        if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.onloadedmetadata = () => videoRef.current.play();
+        }
+    } catch (e) {
+        console.warn("Retrying without facingMode... ", e);
+        try {
+            const fallback = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
+            window.camStream = fallback;
+            if (videoRef.current) {
+                videoRef.current.srcObject = fallback;
+                videoRef.current.onloadedmetadata = () => videoRef.current.play();
+            }
+        } catch (err) {
+            console.error("Camera error:", err);
+            alert("Camera access denied or device has no camera.");
+        }
+    }
   };
 
   useEffect(() => {
@@ -191,7 +205,7 @@ function App() {
 
   return (
     <>
-      <video ref={videoRef} id="video-input" autoPlay playsInline style={{ display: 'none' }}></video>
+      <video ref={videoRef} id="video-input" autoPlay playsInline muted style={{ display: 'none' }}></video>
       <canvas ref={bgCanvasRef} id="bg-canvas" style={{ display: "none" }}></canvas>
 
       {/* Hidden inputs to pass state to the tracking closure cleanly */}
