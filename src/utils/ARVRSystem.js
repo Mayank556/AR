@@ -64,18 +64,47 @@ export default class ARVRSystem {
 
     animate() {
         this.animationId = requestAnimationFrame(() => this.animate());
-        this.controls.update(); // for damping
+        this.controls.update();
+        this.objects3D.forEach(obj => {
+            if (this.transformControl.object !== obj) {
+                // Idle animation: slight bob or rotation 
+                obj.rotation.y += 0.01;
+            }
+        }); // for damping
         this.renderer.render(this.scene, this.camera);
     }
     
     $code
+    setTransformMode(mode) {
+        this.transformControl.setMode(mode);
+    }
+
+    handleTwoHand(distance, angle) {
+        const obj = this.transformControl.object;
+        if (!obj) return;
+        
+        // Scale base on dist scale range
+        const scaleFactor = Math.max(0.1, distance / 200);
+        obj.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        
+        // Rotate based on angle
+        obj.rotation.y = angle;
+    }
+
     stop() {
         if(this.animationId) cancelAnimationFrame(this.animationId);
         this.controls.dispose();
         this.transformControl.dispose();
     }
 
-    addShape(type, color, position = {x:0, y:0, z:0}) {
+    addShape(type, color, position = null) {
+        if (!position) {
+            position = {
+                x: (Math.random() - 0.5) * 50,
+                y: 0,
+                z: (Math.random() - 0.5) * 50
+            };
+        }
         this.is3DMode = true;
         let geometry, material, mesh;
         material = new THREE.MeshPhongMaterial({ color: color || 0xffffff });

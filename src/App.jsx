@@ -135,6 +135,20 @@ function App() {
       drawing.endStroke(); isDrawingRef.current = false; return;
     }
 
+    if (data.gesture === "two-hand" && data.twoHand) {
+      if (mode3D && arvr) {
+          arvr.handleTwoHand(data.twoHand.distance, data.twoHand.angle);
+      }
+      return;
+    }
+
+    if (data.gesture === "two-hand" && data.twoHand) {
+      if (mode3D && arvr) {
+          arvr.handleTwoHand(data.twoHand.distance, data.twoHand.angle);
+      }
+      return;
+    }
+
     if (data.gesture === "draw") {
       if (!isDrawingRef.current) {
         drawing.startStroke(data.x, data.y, false);
@@ -191,6 +205,16 @@ function App() {
         <canvas ref={threeCanvasRef} id="three-canvas" style={{ display: is3DMode ? "block" : "none", position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 6, pointerEvents: is3DMode ? 'auto' : 'none' }}></canvas>
       </div>
 
+      <div id="transform-bar" style={{ display: is3DMode ? "flex" : "none", position: "absolute", top: "20px", left: "20px", zIndex: 10, gap: "10px" }}>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale</button>
+      </div>
+      <div id="transform-bar" style={{ display: is3DMode ? "flex" : "none", position: "absolute", top: "20px", left: "20px", zIndex: 10, gap: "10px" }}>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale</button>
+      </div>
       <div id="top-right" onClick={handleClear}>
         <i className="fa-solid fa-arrow-rotate-right"></i>
       </div>

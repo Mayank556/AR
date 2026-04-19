@@ -1,10 +1,10 @@
-﻿export default class TrackingSystem {
+export default class TrackingSystem {
     constructor(onGesture) {
         this.onGesture = onGesture;
-        this.hands = new window.Hands({locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        this.hands = new window.Hands({locateFile: file => "https://cdn.jsdelivr.net/npm/@mediapipe/hands/$file"});
         
         this.hands.setOptions({
-            maxNumHands: 1,
+            maxNumHands: 2, // Enable two hands for max/min & rotate
             modelComplexity: 1,
             minDetectionConfidence: 0.6,
             minTrackingConfidence: 0.6
@@ -15,7 +15,6 @@
         this.historyX = [];
         this.historyY = [];
         this.SMOOTH_FACTOR = 4; 
-        this.clearHoldCounter = 0;
     }
 
     getSmoothedCoords(x, y) {
@@ -33,9 +32,31 @@
     }
 
     processResults(results) {
-        const out = { gesture: null, x: null, y: null, rawResults: results };
+        const out = { gesture: null, x: null, y: null, rawResults: results, twoHand: null };
         
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        // Two hands detected -> calculate Zoom & Rotate
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
+            const h1 = results.multiHandLandmarks[0];
+            const h2 = results.multiHandLandmarks[1];
+
+            const idx1 = h1[8];
+            const idx2 = h2[8];
+
+            const w = window.innerWidth, h = window.innerHeight;
+            const x1 = idx1.x * w, y1 = idx1.y * h;
+            const x2 = idx2.x * w, y2 = idx2.y * h;
+
+            const dist = Math.hypot(x2 - x1, y2 - y1);
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+
+            out.twoHand = { distance: dist, angle: angle };
+            out.gesture = "two-hand";
+            this.onGesture(out);
+            return;
+        }
+
+        // Single hand detected
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length === 1) {
             const lm = results.multiHandLandmarks[0];
             
             const thumbTip = lm[4];
@@ -56,18 +77,12 @@
             const { x, y } = this.getSmoothedCoords(rawX, rawY);
             out.x = x; out.y = y;
 
-            // Calculate pinch distance between thumb and index
             const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
-            
-            // If they are pinching (distance is very small, say < 0.05)
             const isPinching = pinchDist < 0.08;
 
             if (isPinching) {
-                // Pinch -> Draw
                 out.gesture = "draw";
-                this.clearHoldCounter = 0;
             } else if (indexTip.y < lm[6].y && middleTip.y > lm[10].y && ringTip.y > lm[14].y && pinkyTip.y > lm[18].y) {
-                // Only index up, no pinch -> Hover
                 out.gesture = "hover";
             } else {
                 out.gesture = "stop";
@@ -76,7 +91,6 @@
         } else {
             out.gesture = "none";
             this.historyX = []; this.historyY = [];
-            this.clearHoldCounter = 0;
         }
 
         this.onGesture(out);
