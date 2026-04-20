@@ -17,16 +17,18 @@
         this.renderAll();
     }
 
-    startParams(color, size) { 
+    startParams(color, size, type = 'bead') { 
         this.color = color; 
         this.size = size; 
+        this.brushType = type;
     }
 
     startStroke(x, y, isErase = false) {
         this.currentStroke = { 
             points: [{x, y}], 
             color: isErase ? "erase" : this.color, 
-            baseSize: this.size 
+            baseSize: this.size,
+            type: this.brushType || 'bead'
         };
         this.strokes.push(this.currentStroke);
     }
@@ -34,12 +36,13 @@
     continueStroke(x, y) {
         if (!this.currentStroke) return;
         
-        // Only add point if it's far enough away from the last point to create the "bead" effect
         const lastPoint = this.currentStroke.points[this.currentStroke.points.length - 1];
         const dist = Math.hypot(x - lastPoint.x, y - lastPoint.y);
         
-        // Bead spacing distance
-        if (dist > this.size * 0.8) {
+        let spacing = this.size * 0.8;
+        if (this.currentStroke.type === 'line' || this.currentStroke.type === 'neon') spacing = this.size * 0.2;
+        
+        if (dist > spacing) {
             this.currentStroke.points.push({x, y});
         }
     }
@@ -66,10 +69,42 @@
             
             if (stroke.color === "erase") continue; // simplistic for now
             
+            if (stroke.type === 'line' || stroke.type === 'neon') {
+                this.ctx.beginPath();
+                this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let i = 1; i < stroke.points.length; i++) {
+                    this.ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
+                this.ctx.lineCap = "round";
+                this.ctx.lineJoin = "round";
+                this.ctx.lineWidth = stroke.baseSize;
+                this.ctx.strokeStyle = stroke.color;
+                
+                if (stroke.type === 'neon') {
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.shadowColor = stroke.color;
+                    this.ctx.lineWidth = stroke.baseSize * 0.5;
+                    this.ctx.strokeStyle = "#fff"; // bright center for neon
+                }
+                this.ctx.stroke();
+                this.ctx.shadowBlur = 0;
+                continue;
+            }
+
             for (let point of stroke.points) {
                 // Draw a 3D-looking bead/sphere
                 const radius = stroke.baseSize;
                 
+                if (stroke.type === 'square') {
+                    this.ctx.fillStyle = stroke.color;
+                    this.ctx.shadowBlur = 5;
+                    this.ctx.shadowColor = stroke.color;
+                    this.ctx.fillRect(point.x - radius, point.y - radius, radius * 2, radius * 2);
+                    this.ctx.shadowBlur = 0;
+                    continue;
+                }
+
+                // Default Bead type
                 const gradient = this.ctx.createRadialGradient(
                     point.x - radius/3, point.y - radius/3, radius/10,
                     point.x, point.y, radius

@@ -220,20 +220,22 @@ function App() {
       </div>
 
       <div id="transform-bar" style={{ display: is3DMode ? "flex" : "none", position: "absolute", top: "20px", left: "20px", zIndex: 10, gap: "10px" }}>
-        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move</button>
-        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate</button>
-        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale</button>
-      </div>
-      <div id="transform-bar" style={{ display: is3DMode ? "flex" : "none", position: "absolute", top: "20px", left: "20px", zIndex: 10, gap: "10px" }}>
-        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move</button>
-        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate</button>
-        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move All Axes</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate 3D</button>
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale Output</button>
       </div>
       <div id="top-right" onClick={handleClear}>
         <i className="fa-solid fa-arrow-rotate-right"></i>
       </div>
 
-      <div id="drawing-tools" style={{ display: !is3DMode ? "flex" : "none", position: "absolute", top: "80px", left: "20px", zIndex: 10, gap: "15px", flexDirection: "column", background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "10px" }}>
+      <div id="drawing-tools" style={{ display: !is3DMode ? "flex" : "none", position: "absolute", top: "80px", left: "20px", zIndex: 10, gap: "10px", flexDirection: "column", background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "10px" }}>
+        <label style={{color:"white", fontSize:"12px"}}>Brush Type</label>
+        <select onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.brushType = e.target.value; }} style={{padding:"5px", borderRadius:"5px"}}>
+          <option value="bead">3D Bead</option>
+          <option value="line">Solid Line</option>
+          <option value="neon">Neon Line</option>
+          <option value="square">Square</option>
+        </select>
         <label style={{color:"white", fontSize:"12px"}}>Brush Color</label>
         <input type="color" defaultValue="#8b5a2b" onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.color = e.target.value; }} style={{width:"40px", height:"40px", borderRadius:"50%", border:"none", cursor:"pointer"}}/>
         <label style={{color:"white", fontSize:"12px"}}>Brush Size</label>
@@ -241,12 +243,15 @@ function App() {
         <button className="action-btn" onClick={() => drawingSystemRef.current?.undo()} style={{padding: "5px 10px", fontSize: "14px"}}>Undo Last</button>
       </div>
       <div id="bottom-bar">
-      <div id="shape-bar" style={{ display: is3DMode ? 'flex' : 'none', position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, gap: '10px' }}>
+      <div id="shape-bar" style={{ display: is3DMode ? 'flex' : 'none', position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, gap: '5px', flexWrap: 'wrap', width: '90%', justifyContent: 'center' }}>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('box', 0x228B22)}>Cube</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('sphere', 0x2222cc)}>Sphere</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('cylinder', 0xccaacc)}>Cylinder</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('cone', 0xcccc22)}>Cone</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('torus', 0xff8822)}>Torus</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('icosahedron', 0x4499ff)}>Icosahedron</button>
           <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('house', 0xffbbaaa)}>House</button>
           <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('tree', 0x228B22)}>Tree</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('vehicle', 0xcc2222)}>Car</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('circle', 0x2222cc)}>Circle</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('rectangle', 0xccaacc)}>Rect</button>
           <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('human', 0x4499ff)}>Human</button>
       </div>
         <button className={`action-btn ${isDrawingMode ? 'active' : ''}`} onClick={() => setIsDrawingMode(!isDrawingMode)}>

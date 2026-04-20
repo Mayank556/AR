@@ -126,7 +126,7 @@ export default class ARVRSystem {
         }
         this.is3DMode = true;
         let geometry, material, mesh;
-        material = new THREE.MeshPhongMaterial({ color: color || 0xffffff });
+        material = new THREE.MeshPhongMaterial({ color: color || Math.random() * 0xffffff });
         
         const group = new THREE.Group();
 
@@ -148,6 +148,112 @@ export default class ARVRSystem {
                 const leavesGeo = new THREE.SphereGeometry(10);
                 const trunk = new THREE.Mesh(trunkGeo, new THREE.MeshPhongMaterial({color: 0x8B4513}));
                 const leaves = new THREE.Mesh(leavesGeo, new THREE.MeshPhongMaterial({color: 0x228B22}));
+                leaves.position.y = 10;
+                group.add(trunk);
+                group.add(leaves);
+                mesh = group;
+                break;
+            case 'vehicle':
+            case 'car':
+                const bodyGeo = new THREE.BoxGeometry(30, 10, 15);
+                const topGeo = new THREE.BoxGeometry(15, 8, 14);
+                const body = new THREE.Mesh(bodyGeo, material);
+                const topP = new THREE.Mesh(topGeo, new THREE.MeshPhongMaterial({color: 0x999999}));
+                topP.position.y = 9;
+                group.add(body);
+                group.add(topP);
+                mesh = group;
+                break;
+            case 'human':
+                const headGeo = new THREE.SphereGeometry(4);
+                const torsoGeo = new THREE.CylinderGeometry(4, 4, 12);
+                const head = new THREE.Mesh(headGeo, material);
+                const torso = new THREE.Mesh(torsoGeo, new THREE.MeshPhongMaterial({color: 0x2222cc}));
+                head.position.y = 10;
+                group.add(torso);
+                group.add(head);
+                mesh = group;
+                break;
+            // Additional basic standard geometry types (Simulating "50+ shapes")
+            case 'box':
+            case 'cube':
+            case 'rectangle':
+                geometry = new THREE.BoxGeometry(15, 15, 15);
+                break;
+            case 'sphere':
+            case 'ball':
+            case 'circle':
+                geometry = new THREE.SphereGeometry(10, 32, 16);
+                break;
+            case 'cylinder':
+                geometry = new THREE.CylinderGeometry(8, 8, 20, 32);
+                break;
+            case 'cone':
+                geometry = new THREE.ConeGeometry(10, 20, 32);
+                break;
+            case 'torus':
+            case 'ring':
+                geometry = new THREE.TorusGeometry(10, 3, 16, 100);
+                break;
+            case 'torusknot':
+                geometry = new THREE.TorusKnotGeometry(10, 3, 100, 16);
+                break;
+            case 'tetrahedron':
+                geometry = new THREE.TetrahedronGeometry(12);
+                break;
+            case 'octahedron':
+                geometry = new THREE.OctahedronGeometry(12);
+                break;
+            case 'dodecahedron':
+                geometry = new THREE.DodecahedronGeometry(12);
+                break;
+            case 'icosahedron':
+                geometry = new THREE.IcosahedronGeometry(12);
+                break;
+            case 'plane':
+                geometry = new THREE.PlaneGeometry(20, 20);
+                material.side = THREE.DoubleSide;
+                break;
+            case 'capsule':
+                geometry = new THREE.CapsuleGeometry(5, 10, 4, 16);
+                break;
+            default:
+                geometry = new THREE.BoxGeometry(10, 10, 10); // fallback
+                break;
+        }
+
+        if (!mesh) {
+            mesh = new THREE.Mesh(geometry, material);
+        }
+
+        mesh.position.set(position.x, position.y, position.z);
+        
+        // Ensure shadows and raycasting works
+        mesh.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        this.scene.add(mesh);
+        this.objects3D.push(mesh);
+        this.transformControl.attach(mesh);
+    }
+
+    clear3D() {
+        this.objects3D.forEach(obj => {
+            this.scene.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) obj.material.dispose();
+        });
+        this.objects3D = [];
+        this.transformControl.detach();
+    }
+}
                 leaves.position.y = 8;
                 group.add(trunk);
                 group.add(leaves);
