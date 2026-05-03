@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
+import helvetikerFont from "three/examples/fonts/helvetiker_regular.typeface.json";
 
 export default class ARVRSystem {
     constructor(threeCanvas) {
@@ -739,28 +741,27 @@ export default class ARVRSystem {
     addTextObject(text, color = 0xffffff, position = null, finish = 'gloss') {
         if (!text) return null;
         const safeText = String(text).slice(0, 32);
-        const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 120px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(safeText, canvas.width / 2, canvas.height / 2);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        const panelMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-        const backingMaterial = this.buildMaterial(color, finish);
         const group = new THREE.Group();
-        const backing = new THREE.Mesh(new THREE.BoxGeometry(24, 8, 2), backingMaterial);
-        const label = new THREE.Mesh(new THREE.PlaneGeometry(22, 6), panelMaterial);
-        label.position.z = 1.1;
-        group.add(backing, label);
+        const geometry = new TextGeometry(safeText, {
+            font: helvetikerFont,
+            size: 8,
+            depth: 2.5,
+            curveSegments: 10,
+            bevelEnabled: true,
+            bevelThickness: 0.35,
+            bevelSize: 0.15,
+            bevelSegments: 2
+        });
+        geometry.computeBoundingBox();
+        geometry.center();
+        const textMesh = new THREE.Mesh(geometry, this.buildMaterial(color, finish));
+        const textWidth = geometry.boundingBox ? geometry.boundingBox.max.x - geometry.boundingBox.min.x + 8 : 40;
+        const backing = new THREE.Mesh(
+            new THREE.BoxGeometry(textWidth, 12, 1.5),
+            new THREE.MeshPhongMaterial({ color: 0x111111, transparent: true, opacity: 0.35 })
+        );
+        backing.position.z = -1.8;
+        group.add(backing, textMesh);
 
         if (!position) {
             position = { x: 0, y: 0, z: 0 };
@@ -781,6 +782,119 @@ export default class ARVRSystem {
         this.selectedObject = group;
         this.transformControl.attach(group);
         return group;
+    }
+
+    getStrokeBounds(stroke) {
+        const points = stroke?.points || [];
+        const xs = points.map((point) => point.x);
+        const ys = points.map((point) => point.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const width = Math.max(8, maxX - minX);
+        const height = Math.max(8, maxY - minY);
+        return {
+            minX,
+            maxX,
+            minY,
+            maxY,
+            width,
+            height,
+            centerX: minX + width / 2,
+            centerY: minY + height / 2
+        };
+    }
+
+    buildShapeFromStroke(stroke) {
+        const bounds = this.getStrokeBounds(stroke);
+        const shape = new THREE.Shape();
+        const centerX = bounds.centerX;
+        const centerY = bounds.centerY;
+        const scaleX = 0.28;
+        const scaleY = 0.28;
+        const toLocal = (point) => new THREE.Vector2((point.x - centerX) * scaleX, -(point.y - centerY) * scaleY);
+        const start = stroke.points[0];
+        const end = stroke.points[stroke.points.length - 1] || start;
+
+        switch (stroke.tool) {
+            case 'line': {
+                const points = [start, end].map(toLocal);
+                const geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+                    new THREE.Vector3(points[0].x, points[0].y, 0),
+                    new THREE.Vector3(points[1].x, points[1].y, 0)
+                ]), 12, Math.max(0.5, (stroke.baseSize || 4) * 0.08), 8, false);
+                return { geometry, center: new THREE.Vector3(centerX, centerY, 0) };
+            }
+            case 'circle':
+                shape.absellipse(0, 0, bounds.width * scaleX * 0.5, bounds.height * scaleY * 0.5, 0, Math.PI * 2, false, 0);
+                break;
+            case 'rectangle':
+            case 'square':
+                shape.moveTo(-bounds.width * scaleX * 0.5, -bounds.height * scaleY * 0.5);
+                shape.lineTo(bounds.width * scaleX * 0.5, -bounds.height * scaleY * 0.5);
+                shape.lineTo(bounds.width * scaleX * 0.5, bounds.height * scaleY * 0.5);
+                shape.lineTo(-bounds.width * scaleX * 0.5, bounds.height * scaleY * 0.5);
+                shape.closePath();
+                break;
+            case 'triangle':
+                shape.moveTo(0, -bounds.height * scaleY * 0.5);
+                shape.lineTo(-bounds.width * scaleX * 0.5, bounds.height * scaleY * 0.5);
+                shape.lineTo(bounds.width * scaleX * 0.5, bounds.height * scaleY * 0.5);
+                shape.closePath();
+                break;
+            case 'diamond':
+                shape.moveTo(0, -bounds.height * scaleY * 0.5);
+                shape.lineTo(-bounds.width * scaleX * 0.5, 0);
+                shape.lineTo(0, bounds.height * scaleY * 0.5);
+                shape.lineTo(bounds.width * scaleX * 0.5, 0);
+                shape.closePath();
+                break;
+            case 'hexagon':
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i - Math.PI / 6;
+                    const px = Math.cos(angle) * bounds.width * scaleX * 0.5;
+                    const py = Math.sin(angle) * bounds.height * scaleY * 0.5;
+                    if (i === 0) shape.moveTo(px, py);
+                    else shape.lineTo(px, py);
+                }
+                shape.closePath();
+                break;
+            case 'star':
+                for (let i = 0; i < 10; i++) {
+                    const angle = (Math.PI / 5) * i - Math.PI / 2;
+                    const radius = i % 2 === 0 ? Math.max(bounds.width, bounds.height) * 0.35 : Math.max(bounds.width, bounds.height) * 0.16;
+                    const px = Math.cos(angle) * radius * 0.28;
+                    const py = Math.sin(angle) * radius * 0.28;
+                    if (i === 0) shape.moveTo(px, py);
+                    else shape.lineTo(px, py);
+                }
+                shape.closePath();
+                break;
+            case 'heart': {
+                const w = bounds.width * scaleX * 0.5;
+                const h = bounds.height * scaleY * 0.5;
+                shape.moveTo(0, h);
+                shape.bezierCurveTo(-w * 1.2, h * 0.2, -w * 1.3, -h * 0.8, 0, -h * 0.2);
+                shape.bezierCurveTo(w * 1.3, -h * 0.8, w * 1.2, h * 0.2, 0, h);
+                shape.closePath();
+                break;
+            }
+            default:
+                return { geometry: null, center: new THREE.Vector3(centerX, centerY, 0) };
+        }
+
+        const depth = Math.max(1.2, (stroke.baseSize || 6) * 0.35);
+        const geometry = new THREE.ExtrudeGeometry(shape, {
+            depth,
+            bevelEnabled: true,
+            bevelThickness: depth * 0.15,
+            bevelSize: depth * 0.08,
+            bevelSegments: 2,
+            curveSegments: 16
+        });
+        geometry.center();
+        return { geometry, center: new THREE.Vector3(centerX, centerY, 0) };
     }
 
     clear3D() {
@@ -856,19 +970,25 @@ export default class ARVRSystem {
         strokes.forEach((stroke) => {
             if (!stroke.points || stroke.points.length < 2) return;
 
-            const points = stroke.points.map((p) => {
-                const nx = ((p.x / w) - 0.5) * 200;
-                const ny = -((p.y / h) - 0.5) * 100;
-                return new THREE.Vector3(nx, ny, 0);
-            });
-
-            const curve = new THREE.CatmullRomCurve3(points);
-            const tubeRadius = Math.max(0.5, (stroke.baseSize || 6) * 0.15);
-            const geometry = new THREE.TubeGeometry(curve, points.length * 2, tubeRadius, 8, false);
+            const strokeResult = this.buildShapeFromStroke(stroke);
+            let geometry = strokeResult.geometry;
+            if (!geometry) {
+                const points = stroke.points.map((p) => {
+                    const nx = ((p.x / w) - 0.5) * 200;
+                    const ny = -((p.y / h) - 0.5) * 100;
+                    return new THREE.Vector3(nx, ny, 0);
+                });
+                const curve = new THREE.CatmullRomCurve3(points);
+                const tubeRadius = Math.max(0.5, (stroke.baseSize || 6) * 0.15);
+                geometry = new THREE.TubeGeometry(curve, points.length * 2, tubeRadius, 8, false);
+            }
             const color = stroke.color && stroke.color !== 'erase' ? new THREE.Color(stroke.color) : new THREE.Color(0x8b5a2b);
             const material = new THREE.MeshPhongMaterial({ color, shininess: 80 });
             const mesh = new THREE.Mesh(geometry, material);
+            const center = strokeResult.center || new THREE.Vector3();
+            mesh.position.set(((center.x / w) - 0.5) * 200, -((center.y / h) - 0.5) * 100, 0);
             mesh.userData.shapeType = 'stroke';
+            mesh.userData.strokeTool = stroke.tool || 'pen';
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             this.scene.add(mesh);
