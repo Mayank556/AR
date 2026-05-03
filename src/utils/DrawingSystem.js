@@ -77,6 +77,22 @@
     drawFreeformStroke(stroke) {
         if (stroke.points.length === 0) return;
 
+        if (stroke.type === 'pencil') {
+            this.ctx.beginPath();
+            this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+                this.ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.lineWidth = Math.max(1.5, stroke.baseSize * 0.35);
+            this.ctx.strokeStyle = stroke.color;
+            this.ctx.globalAlpha = 0.88;
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1;
+            return;
+        }
+
         if (stroke.type === 'line' || stroke.type === 'neon') {
             this.ctx.beginPath();
             this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);

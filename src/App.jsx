@@ -19,6 +19,7 @@ const DRAWING_TOOLS = [
 
 const BRUSH_STYLES = [
   { label: '3D Bead', value: 'bead' },
+  { label: 'Pencil', value: 'pencil' },
   { label: 'Solid Line', value: 'line' },
   { label: 'Neon Line', value: 'neon' },
   { label: 'Square', value: 'square' }
@@ -292,8 +293,9 @@ function App() {
   };
 
   const toggleSwitch = () => {
-    setIsToggled(!isToggled);
-    setIsFrontCam(!isFrontCam);
+    const nextFront = !isFrontCam;
+    setIsToggled(nextFront);
+    setIsFrontCam(nextFront);
   };
 
   const handleSave = async () => {
@@ -460,6 +462,18 @@ function App() {
     setIs3DMode(true);
   };
 
+  const handleConvertSurface = () => {
+    const drawingCanvas = drawingCanvasRef.current;
+    if (!drawingCanvas) return;
+    arvrSystemRef.current?.convertCanvasToSurface3D(drawingCanvas, materialStyle);
+    setIs3DMode(true);
+  };
+
+  const handleSetCameraMode = (front) => {
+    setIsFrontCam(front);
+    setIsToggled(front);
+  };
+
   return (
     <>
       <video ref={videoRef} id="video-input" autoPlay playsInline muted style={{ display: 'none' }}></video>
@@ -603,8 +617,20 @@ function App() {
           2D→3D
         </button>
 
+        <button className="action-btn" onClick={handleConvertSurface}>
+          Surface→3D
+        </button>
+
         <button className="action-btn" onClick={handleAdd3DText}>
           Text→3D
+        </button>
+
+        <button className="action-btn" onClick={() => handleSetCameraMode(false)}>
+          Back Cam
+        </button>
+
+        <button className="action-btn" onClick={() => handleSetCameraMode(true)}>
+          Front Cam
         </button>
 
         <div className={`toggle-switch ${isToggled ? 'on' : ''}`} onClick={toggleSwitch}>

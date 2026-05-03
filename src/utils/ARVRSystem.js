@@ -784,6 +784,55 @@ export default class ARVRSystem {
         return group;
     }
 
+    convertCanvasToSurface3D(sourceCanvas, finish = 'gloss') {
+        if (!sourceCanvas) return null;
+
+        const texture = new THREE.CanvasTexture(sourceCanvas);
+        texture.needsUpdate = true;
+        if ('colorSpace' in texture) texture.colorSpace = THREE.SRGBColorSpace;
+
+        const aspect = sourceCanvas.width / Math.max(1, sourceCanvas.height);
+        const surfaceWidth = 120;
+        const surfaceHeight = surfaceWidth / Math.max(0.25, aspect);
+
+        const group = new THREE.Group();
+        const backing = new THREE.Mesh(
+            new THREE.BoxGeometry(surfaceWidth + 6, surfaceHeight + 6, 3),
+            this.buildMaterial(0x1c1f26, finish)
+        );
+        backing.position.z = -2;
+
+        const board = new THREE.Mesh(
+            new THREE.PlaneGeometry(surfaceWidth, surfaceHeight),
+            new THREE.MeshStandardMaterial({
+                map: texture,
+                transparent: true,
+                roughness: 0.8,
+                metalness: 0.05,
+                side: THREE.DoubleSide
+            })
+        );
+
+        group.add(backing, board);
+        group.position.set(0, 0, 0);
+        group.userData.shapeType = 'surface-board';
+        group.userData.colorHex = 0xffffff;
+
+        group.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        this.scene.add(group);
+        this.objects3D.push(group);
+        this.selectedObject = group;
+        this.transformControl.attach(group);
+        this.is3DMode = true;
+        return group;
+    }
+
     getStrokeBounds(stroke) {
         const points = stroke?.points || [];
         const xs = points.map((point) => point.x);
