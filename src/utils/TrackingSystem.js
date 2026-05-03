@@ -32,7 +32,7 @@ export default class TrackingSystem {
     }
 
     processResults(results) {
-        const out = { gesture: null, x: null, y: null, rawResults: results, twoHand: null };
+        const out = { gesture: null, x: null, y: null, rawResults: results, twoHand: null, pinch: null };
         
         // Two hands detected -> calculate Zoom & Rotate
         if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
@@ -48,8 +48,10 @@ export default class TrackingSystem {
 
             const dist = Math.hypot(x2 - x1, y2 - y1);
             const angle = Math.atan2(y2 - y1, x2 - x1);
+            const centerX = (x1 + x2) / 2;
+            const centerY = (y1 + y2) / 2;
 
-            out.twoHand = { distance: dist, angle: angle };
+            out.twoHand = { distance: dist, angle: angle, centerX, centerY };
             out.gesture = "two-hand";
             this.onGesture(out);
             return;
@@ -79,6 +81,7 @@ export default class TrackingSystem {
 
             const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
             const isPinching = pinchDist < 0.08;
+            out.pinch = pinchDist;
 
             if (isPinching) {
                 out.gesture = "draw";

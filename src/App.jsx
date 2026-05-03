@@ -5,6 +5,51 @@ import TrackingSystem from './utils/TrackingSystem';
 import ARVRSystem from './utils/ARVRSystem';
 import { saveStrokes, loadStrokes, listSessions } from './utils/apiService';
 
+const DRAWING_TOOLS = [
+  { label: 'Pen', value: 'pen' },
+  { label: 'Line', value: 'line' },
+  { label: 'Rectangle', value: 'rectangle' },
+  { label: 'Circle', value: 'circle' },
+  { label: 'Triangle', value: 'triangle' },
+  { label: 'Diamond', value: 'diamond' },
+  { label: 'Hexagon', value: 'hexagon' },
+  { label: 'Star', value: 'star' },
+  { label: 'Heart', value: 'heart' }
+];
+
+const BRUSH_STYLES = [
+  { label: '3D Bead', value: 'bead' },
+  { label: 'Solid Line', value: 'line' },
+  { label: 'Neon Line', value: 'neon' },
+  { label: 'Square', value: 'square' }
+];
+
+const SHAPE_3D_OPTIONS = [
+  { label: 'Cube', value: 'box' },
+  { label: 'Sphere', value: 'sphere' },
+  { label: 'Cylinder', value: 'cylinder' },
+  { label: 'Cone', value: 'cone' },
+  { label: 'Torus', value: 'torus' },
+  { label: 'Torus Knot', value: 'torusknot' },
+  { label: 'Prism', value: 'prism' },
+  { label: 'Pyramid', value: 'pyramid' },
+  { label: 'Capsule', value: 'capsule' },
+  { label: 'Gem', value: 'gem' },
+  { label: 'Heart', value: 'heart' },
+  { label: 'Cloud', value: 'cloud' },
+  { label: 'House', value: 'house' },
+  { label: 'Tree', value: 'tree' },
+  { label: 'Human', value: 'human' },
+  { label: 'Rocket', value: 'rocket' },
+  { label: 'Bus', value: 'bus' },
+  { label: 'Boat', value: 'boat' },
+  { label: 'Chair', value: 'chair' },
+  { label: 'Table', value: 'table' },
+  { label: 'Dodecahedron', value: 'dodecahedron' },
+  { label: 'Icosahedron', value: 'icosahedron' },
+  { label: 'Octahedron', value: 'octahedron' }
+];
+
 function App() {
   const [isDrawingMode, setIsDrawingMode] = useState(true);
   const [is3DMode, setIs3DMode] = useState(false);
@@ -13,6 +58,11 @@ function App() {
   const [cloudStatus, setCloudStatus] = useState('');
   const [sessions, setSessions] = useState([]);
   const [showCloud, setShowCloud] = useState(false);
+  const [brushColor, setBrushColor] = useState('#8b5a2b');
+  const [brushSize, setBrushSize] = useState(12);
+  const [brushStyle, setBrushStyle] = useState('bead');
+  const [drawingTool, setDrawingTool] = useState('pen');
+  const [selected3DShape, setSelected3DShape] = useState('box');
 
   // Refs for Canvases
   const videoRef = useRef(null);
@@ -71,35 +121,38 @@ function App() {
     };
   }, []);
 
-  // Handle stream from camera
-  const startCam = async () => {
-    if (window.camStream) window.camStream.getTracks().forEach(t => t.stop());
-    try {
+  useEffect(() => {
+    drawingSystemRef.current?.startParams(brushColor, brushSize, brushStyle, drawingTool);
+  }, [brushColor, brushSize, brushStyle, drawingTool]);
+
+  useEffect(() => {
+    const startCam = async () => {
+      if (window.camStream) window.camStream.getTracks().forEach(t => t.stop());
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: isFrontCam ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: { facingMode: isFrontCam ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         window.camStream = stream;
         if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.onloadedmetadata = () => videoRef.current.play();
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => videoRef.current.play();
         }
-    } catch (e) {
+      } catch (e) {
         console.warn("Retrying without facingMode... ", e);
         try {
-            const fallback = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
-            window.camStream = fallback;
-            if (videoRef.current) {
-                videoRef.current.srcObject = fallback;
-                videoRef.current.onloadedmetadata = () => videoRef.current.play();
-            }
+          const fallback = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
+          window.camStream = fallback;
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallback;
+            videoRef.current.onloadedmetadata = () => videoRef.current.play();
+          }
         } catch (err) {
-            console.error("Camera error:", err);
-            alert("Camera access denied or device has no camera.");
+          console.error("Camera error:", err);
+          alert("Camera access denied or device has no camera.");
         }
-    }
-  };
+      }
+    };
 
-  useEffect(() => {
     startCam();
   }, [isFrontCam]);
 
@@ -156,13 +209,12 @@ function App() {
     if (data.gesture === "two-hand" && data.twoHand) {
       if (mode3D && arvr) {
           arvr.handleTwoHand(data.twoHand.distance, data.twoHand.angle);
+          return;
       }
-      return;
-    }
-
-    if (data.gesture === "two-hand" && data.twoHand) {
-      if (mode3D && arvr) {
-          arvr.handleTwoHand(data.twoHand.distance, data.twoHand.angle);
+      if (drawing && !mode3D) {
+          const nextSize = Math.max(2, Math.min(80, Math.round(data.twoHand.distance / 6)));
+          setBrushSize(nextSize);
+          drawing.size = nextSize;
       }
       return;
     }
@@ -258,6 +310,56 @@ function App() {
     }
   };
 
+  const handleAdd3DShape = () => {
+    const shape = selected3DShape;
+    const palette = {
+      box: 0x2d9cdb,
+      sphere: 0x7b61ff,
+      cylinder: 0x22c55e,
+      cone: 0xf59e0b,
+      torus: 0xf97316,
+      torusknot: 0xec4899,
+      prism: 0x06b6d4,
+      pyramid: 0xe11d48,
+      capsule: 0x8b5cf6,
+      gem: 0x38bdf8,
+      heart: 0xfb7185,
+      cloud: 0xe2e8f0,
+      house: 0xf97316,
+      tree: 0x16a34a,
+      human: 0x60a5fa,
+      rocket: 0xf43f5e,
+      bus: 0xeab308,
+      boat: 0x38bdf8,
+      chair: 0x92400e,
+      table: 0x78350f,
+      dodecahedron: 0x8b5cf6,
+      icosahedron: 0x14b8a6,
+      octahedron: 0x3b82f6
+    };
+
+    arvrSystemRef.current?.addShape(shape, palette[shape] ?? 0xffffff);
+  };
+
+  const handleDuplicateSelectedShape = () => {
+    const arvr = arvrSystemRef.current;
+    const selected = arvr?.selectedObject;
+    if (!arvr || !selected) return;
+    const cloneType = selected.userData?.shapeType || 'box';
+    const clone = arvr.addShape(cloneType, selected.userData?.colorHex ?? 0xffffff, {
+      x: selected.position.x + 16,
+      y: selected.position.y + 8,
+      z: selected.position.z + 16
+    });
+    if (clone) arvr.focusObject(clone);
+  };
+
+  const handleReplaceSelectedShape = () => {
+    const arvr = arvrSystemRef.current;
+    if (!arvr?.selectedObject) return;
+    arvr.replaceSelectedShape(selected3DShape, undefined);
+  };
+
   return (
     <>
       <video ref={videoRef} id="video-input" autoPlay playsInline muted style={{ display: 'none' }}></video>
@@ -278,6 +380,8 @@ function App() {
         <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move All Axes</button>
         <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate 3D</button>
         <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale Output</button>
+        <button className="action-btn" onClick={handleDuplicateSelectedShape}>Duplicate Selected</button>
+        <button className="action-btn" onClick={handleReplaceSelectedShape}>Replace Selected</button>
       </div>
       <div id="top-right" onClick={handleClear}>
         <i className="fa-solid fa-arrow-rotate-right"></i>
@@ -309,30 +413,38 @@ function App() {
       </div>
 
       <div id="drawing-tools" style={{ display: !is3DMode ? "flex" : "none", position: "absolute", top: "80px", left: "20px", zIndex: 10, gap: "10px", flexDirection: "column", background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "10px" }}>
-        <label style={{color:"white", fontSize:"12px"}}>Brush Type</label>
-        <select onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.brushType = e.target.value; }} style={{padding:"5px", borderRadius:"5px"}}>
-          <option value="bead">3D Bead</option>
-          <option value="line">Solid Line</option>
-          <option value="neon">Neon Line</option>
-          <option value="square">Square</option>
+        <label style={{color:"white", fontSize:"12px"}}>Draw Tool</label>
+        <select value={drawingTool} onChange={(e) => setDrawingTool(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
+          {DRAWING_TOOLS.map((tool) => (
+            <option key={tool.value} value={tool.value}>{tool.label}</option>
+          ))}
+        </select>
+        <label style={{color:"white", fontSize:"12px"}}>Brush Style</label>
+        <select value={brushStyle} onChange={(e) => setBrushStyle(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
+          {BRUSH_STYLES.map((style) => (
+            <option key={style.value} value={style.value}>{style.label}</option>
+          ))}
         </select>
         <label style={{color:"white", fontSize:"12px"}}>Brush Color</label>
-        <input type="color" defaultValue="#8b5a2b" onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.color = e.target.value; }} style={{width:"40px", height:"40px", borderRadius:"50%", border:"none", cursor:"pointer"}}/>
-        <label style={{color:"white", fontSize:"12px"}}>Brush Size</label>
-        <input type="range" min="2" max="40" defaultValue="12" onChange={(e) => { if(drawingSystemRef.current) drawingSystemRef.current.size = parseInt(e.target.value); }} />
+        <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} style={{width:"40px", height:"40px", borderRadius:"50%", border:"none", cursor:"pointer"}}/>
+        <label style={{color:"white", fontSize:"12px"}}>Brush Size: {brushSize}</label>
+        <input type="range" min="2" max="80" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value, 10))} />
         <button className="action-btn" onClick={() => drawingSystemRef.current?.undo()} style={{padding: "5px 10px", fontSize: "14px"}}>Undo Last</button>
       </div>
       <div id="bottom-bar">
-      <div id="shape-bar" style={{ display: is3DMode ? 'flex' : 'none', position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, gap: '5px', flexWrap: 'wrap', width: '90%', justifyContent: 'center' }}>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('box', 0x228B22)}>Cube</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('sphere', 0x2222cc)}>Sphere</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('cylinder', 0xccaacc)}>Cylinder</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('cone', 0xcccc22)}>Cone</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('torus', 0xff8822)}>Torus</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('icosahedron', 0x4499ff)}>Icosahedron</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('house', 0xffbbaaa)}>House</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('tree', 0x228B22)}>Tree</button>
-          <button className="action-btn" onClick={() => arvrSystemRef.current?.addShape('human', 0x4499ff)}>Human</button>
+      <div id="shape-bar" style={{ display: is3DMode ? 'flex' : 'none', position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, gap: '8px', flexWrap: 'wrap', width: '92%', justifyContent: 'center', alignItems: 'center' }}>
+          <label style={{color:"white", fontSize:"12px"}}>3D Shape</label>
+          <select value={selected3DShape} onChange={(e) => setSelected3DShape(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
+            {SHAPE_3D_OPTIONS.map((shape) => (
+              <option key={shape.value} value={shape.value}>{shape.label}</option>
+            ))}
+          </select>
+          <button className="action-btn" onClick={handleAdd3DShape}>Add Shape</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("translate")}>Move</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("rotate")}>Rotate</button>
+          <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale</button>
+          <button className="action-btn" onClick={handleDuplicateSelectedShape}>Replace / Copy</button>
+            <span style={{ color: 'white', fontSize: '11px', opacity: 0.85 }}>Touch: drag to move, pinch to resize selected shape</span>
       </div>
         <button className={`action-btn ${isDrawingMode ? 'active' : ''}`} onClick={() => setIsDrawingMode(!isDrawingMode)}>
           <div className="shutter-icon"><div className="shutter-inner"></div></div>
