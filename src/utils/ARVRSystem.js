@@ -469,6 +469,145 @@ export default class ARVRSystem {
                 mesh = group;
                 break;
             }
+            case 'building': {
+                const mainBody = new THREE.Mesh(new THREE.BoxGeometry(20, 28, 18), material);
+                const roofBase = new THREE.Mesh(new THREE.BoxGeometry(22, 3, 20), new THREE.MeshPhongMaterial({ color: 0x333333 }));
+                roofBase.position.y = 16;
+                group.add(mainBody, roofBase);
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        const window = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 0.5), new THREE.MeshPhongMaterial({ color: 0x87ceeb }));
+                        window.position.set(-6 + col * 6, 2 + row * 6.5, 9.5);
+                        group.add(window);
+                    }
+                }
+                mesh = group;
+                break;
+            }
+            case 'skyscraper': {
+                const body = new THREE.Mesh(new THREE.BoxGeometry(16, 50, 14), material);
+                const rooftop = new THREE.Mesh(new THREE.ConeGeometry(10, 8, 4), new THREE.MeshPhongMaterial({ color: 0xaaaaaa }));
+                rooftop.position.y = 29;
+                group.add(body, rooftop);
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        const window = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 0.4), new THREE.MeshPhongMaterial({ color: 0xffff99 }));
+                        window.position.set(-5 + col * 4, -10 + row * 6, 7.2);
+                        group.add(window);
+                    }
+                }
+                mesh = group;
+                break;
+            }
+            case 'shop': {
+                const body = new THREE.Mesh(new THREE.BoxGeometry(18, 12, 10), material);
+                const storefront = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 0.2), new THREE.MeshPhongMaterial({ color: 0x1a1a1a }));
+                storefront.position.set(0, -2, 5.1);
+                const window = new THREE.Mesh(new THREE.BoxGeometry(14, 6, 0.1), new THREE.MeshPhongMaterial({ color: 0xccffff }));
+                window.position.set(0, 0, 5.15);
+                const door = new THREE.Mesh(new THREE.BoxGeometry(4, 8, 0.1), new THREE.MeshPhongMaterial({ color: 0x8b4513 }));
+                door.position.set(-4, -2, 5.15);
+                group.add(body, storefront, window, door);
+                mesh = group;
+                break;
+            }
+            case 'streetlamp': {
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 24, 8), material);
+                const head = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 1, 8), new THREE.MeshPhongMaterial({ color: 0xffff99 }));
+                head.position.y = 13;
+                const light = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), new THREE.MeshPhongMaterial({ color: 0xffff00, emissive: 0xffff99 }));
+                light.position.y = 13.5;
+                group.add(pole, head, light);
+                mesh = group;
+                break;
+            }
+            case 'fountain': {
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(12, 14, 2, 32), material);
+                const basin = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 0.5, 32), new THREE.MeshPhongMaterial({ color: 0x6b9bd1 }));
+                basin.position.y = 1.5;
+                const center = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 6, 16), new THREE.MeshPhongMaterial({ color: 0xcccccc }));
+                center.position.y = 3.5;
+                const spout = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 12), new THREE.MeshPhongMaterial({ color: 0x6b9bd1 }));
+                spout.position.y = 8;
+                group.add(base, basin, center, spout);
+                mesh = group;
+                break;
+            }
+            case 'bridge': {
+                const deck = new THREE.Mesh(new THREE.BoxGeometry(30, 2, 14), material);
+                const pillarL = new THREE.Mesh(new THREE.BoxGeometry(2, 16, 4), new THREE.MeshPhongMaterial({ color: 0x666666 }));
+                const pillarR = pillarL.clone();
+                pillarL.position.set(-14, -7, 0);
+                pillarR.position.set(14, -7, 0);
+                const arch = new THREE.Mesh(new THREE.TorusGeometry(10, 2, 12, 32, Math.PI), new THREE.MeshPhongMaterial({ color: 0x999999 }));
+                arch.position.set(0, 4, 0);
+                group.add(deck, pillarL, pillarR, arch);
+                mesh = group;
+                break;
+            }
+            case 'tower': {
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(8, 10, 6, 16), material);
+                const mid = new THREE.Mesh(new THREE.CylinderGeometry(6, 8, 18, 16), new THREE.MeshPhongMaterial({ color: 0x999999 }));
+                mid.position.y = 12;
+                const top = new THREE.Mesh(new THREE.ConeGeometry(5, 10, 16), new THREE.MeshPhongMaterial({ color: 0xff6666 }));
+                top.position.y = 28;
+                group.add(base, mid, top);
+                mesh = group;
+                break;
+            }
+            case 'wall': {
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        const brick = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 2.2), new THREE.MeshPhongMaterial({ color: 0x8b4513 }));
+                        brick.position.set(-9 + col * 6, -4 + row * 6, 0);
+                        group.add(brick);
+                    }
+                }
+                mesh = group;
+                break;
+            }
+            case 'door': {
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 0.5), new THREE.MeshPhongMaterial({ color: 0x666666 }));
+                const door = new THREE.Mesh(new THREE.BoxGeometry(5, 9, 0.3), new THREE.MeshPhongMaterial({ color: 0x8b4513 }));
+                door.position.z = 0.2;
+                const knob = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12), new THREE.MeshPhongMaterial({ color: 0xffaa00 }));
+                knob.position.set(2, 0, 0.5);
+                group.add(frame, door, knob);
+                mesh = group;
+                break;
+            }
+            case 'window': {
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 0.5), new THREE.MeshPhongMaterial({ color: 0x333333 }));
+                const pane1 = new THREE.Mesh(new THREE.BoxGeometry(3.8, 5.8, 0.1), new THREE.MeshPhongMaterial({ color: 0x87ceeb }));
+                pane1.position.set(-2, 0, 0.2);
+                const pane2 = pane1.clone();
+                pane2.position.set(2, 0, 0.2);
+                group.add(frame, pane1, pane2);
+                mesh = group;
+                break;
+            }
+            case 'stairs': {
+                const stairs = new THREE.Group();
+                for (let i = 0; i < 6; i++) {
+                    const step = new THREE.Mesh(new THREE.BoxGeometry(10, 2, 4), material);
+                    step.position.set(0, -4 + i * 2.2, i * 2.8);
+                    stairs.add(step);
+                }
+                mesh = stairs;
+                break;
+            }
+            case 'fence': {
+                const fence = new THREE.Group();
+                for (let i = 0; i < 4; i++) {
+                    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 12, 8), material);
+                    post.position.x = -9 + i * 6;
+                    const rail = new THREE.Mesh(new THREE.BoxGeometry(6, 1, 0.5), new THREE.MeshPhongMaterial({ color: 0x8b4513 }));
+                    rail.position.set(-6 + i * 6, 2, 0);
+                    fence.add(post, rail);
+                }
+                mesh = fence;
+                break;
+            }
             default:
                 break;
         }
@@ -597,6 +736,53 @@ export default class ARVRSystem {
         return mesh;
     }
 
+    addTextObject(text, color = 0xffffff, position = null, finish = 'gloss') {
+        if (!text) return null;
+        const safeText = String(text).slice(0, 32);
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 120px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(safeText, canvas.width / 2, canvas.height / 2);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        const panelMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+        const backingMaterial = this.buildMaterial(color, finish);
+        const group = new THREE.Group();
+        const backing = new THREE.Mesh(new THREE.BoxGeometry(24, 8, 2), backingMaterial);
+        const label = new THREE.Mesh(new THREE.PlaneGeometry(22, 6), panelMaterial);
+        label.position.z = 1.1;
+        group.add(backing, label);
+
+        if (!position) {
+            position = { x: 0, y: 0, z: 0 };
+        }
+
+        group.position.set(position.x, position.y, position.z);
+        group.userData.shapeType = 'text';
+        group.userData.colorHex = color;
+        group.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        this.scene.add(group);
+        this.objects3D.push(group);
+        this.selectedObject = group;
+        this.transformControl.attach(group);
+        return group;
+    }
+
     clear3D() {
         this.objects3D.forEach(obj => {
             this.scene.remove(obj);
@@ -611,6 +797,55 @@ export default class ARVRSystem {
         this.objects3D = [];
         this.selectedObject = null;
         this.transformControl.detach();
+    }
+
+    updateObjectScale(height, width, depth) {
+        if (!this.selectedObject) return;
+        this.selectedObject.scale.y = Math.max(0.1, height);
+        this.selectedObject.scale.x = Math.max(0.1, width);
+        this.selectedObject.scale.z = Math.max(0.1, depth);
+    }
+
+    updateObjectColor(colorHex) {
+        if (!this.selectedObject) return;
+        this.selectedObject.traverse((child) => {
+            if (child.isMesh && child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.color.setHex(colorHex));
+                } else {
+                    child.material.color.setHex(colorHex);
+                }
+            }
+        });
+        this.selectedObject.userData.colorHex = colorHex;
+    }
+
+    updateObjectOpacity(opacity) {
+        if (!this.selectedObject) return;
+        this.selectedObject.traverse((child) => {
+            if (child.isMesh && child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => {
+                        m.opacity = opacity;
+                        m.transparent = opacity < 1;
+                    });
+                } else {
+                    child.material.opacity = opacity;
+                    child.material.transparent = opacity < 1;
+                }
+            }
+        });
+    }
+
+    getSelectedObjectProperties() {
+        if (!this.selectedObject) return null;
+        return {
+            height: this.selectedObject.scale.y,
+            width: this.selectedObject.scale.x,
+            depth: this.selectedObject.scale.z,
+            color: this.selectedObject.userData.colorHex || 0xffffff,
+            opacity: this.selectedObject.material?.opacity ?? 1
+        };
     }
 
     convertStrokesTo3D(strokes) {

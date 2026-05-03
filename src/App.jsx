@@ -69,7 +69,19 @@ const SHAPE_3D_OPTIONS = [
   { label: 'Sun', value: 'sun' },
   { label: 'Arch', value: 'arch' },
   { label: 'Wave', value: 'wave' },
-  { label: 'Cross', value: 'cross' }
+  { label: 'Cross', value: 'cross' },
+  { label: 'Building', value: 'building' },
+  { label: 'Skyscraper', value: 'skyscraper' },
+  { label: 'Shop', value: 'shop' },
+  { label: 'Streetlamp', value: 'streetlamp' },
+  { label: 'Fountain', value: 'fountain' },
+  { label: 'Bridge', value: 'bridge' },
+  { label: 'Tower', value: 'tower' },
+  { label: 'Wall', value: 'wall' },
+  { label: 'Door', value: 'door' },
+  { label: 'Window', value: 'window' },
+  { label: 'Stairs', value: 'stairs' },
+  { label: 'Fence', value: 'fence' }
 ];
 
 function App() {
@@ -86,6 +98,8 @@ function App() {
   const [drawingTool, setDrawingTool] = useState('pen');
   const [selected3DShape, setSelected3DShape] = useState('box');
   const [materialStyle, setMaterialStyle] = useState('gloss');
+  const [showPropertyPanel, setShowPropertyPanel] = useState(false);
+  const [selectedObjectProps, setSelectedObjectProps] = useState({ height: 1, width: 1, depth: 1, color: '#ffffff', opacity: 1 });
 
   // Refs for Canvases
   const videoRef = useRef(null);
@@ -103,9 +117,9 @@ function App() {
 
   useEffect(() => {
     // 1. Initialize Drawing System
-    if (drawingCanvasRef.current && !drawingSystemRef.current) {
-      drawingSystemRef.current = new DrawingSystem(drawingCanvasRef.current);
-    }
+      if (drawingCanvasRef.current && !drawingSystemRef.current) {
+        drawingSystemRef.current = new DrawingSystem(drawingCanvasRef.current);
+      }
 
     // 2. Initialize AR/VR System
     if (threeCanvasRef.current && bgCanvasRef.current && !arvrSystemRef.current) {
@@ -389,6 +403,63 @@ function App() {
     arvr.removeObject(arvr.selectedObject);
   };
 
+  const handleUpdateHeight = (val) => {
+    const newVal = parseFloat(val);
+    setSelectedObjectProps((prev) => {
+      const next = { ...prev, height: newVal };
+      arvrSystemRef.current?.updateObjectScale(next.height, next.width, next.depth);
+      return next;
+    });
+  };
+
+  const handleUpdateWidth = (val) => {
+    const newVal = parseFloat(val);
+    setSelectedObjectProps((prev) => {
+      const next = { ...prev, width: newVal };
+      arvrSystemRef.current?.updateObjectScale(next.height, next.width, next.depth);
+      return next;
+    });
+  };
+
+  const handleUpdateDepth = (val) => {
+    const newVal = parseFloat(val);
+    setSelectedObjectProps((prev) => {
+      const next = { ...prev, depth: newVal };
+      arvrSystemRef.current?.updateObjectScale(next.height, next.width, next.depth);
+      return next;
+    });
+  };
+
+  const handleUpdateColor = (colorVal) => {
+    const hex = parseInt(colorVal.replace('#', ''), 16);
+    setSelectedObjectProps((prev) => ({ ...prev, color: colorVal }));
+    arvrSystemRef.current?.updateObjectColor(hex);
+  };
+
+  const handleUpdateOpacity = (val) => {
+    const newVal = parseFloat(val);
+    setSelectedObjectProps((prev) => ({ ...prev, opacity: newVal }));
+    arvrSystemRef.current?.updateObjectOpacity(newVal);
+  };
+
+  const handleOpenProperties = () => {
+    const arvr = arvrSystemRef.current;
+    if (arvr?.selectedObject) {
+      const props = arvr.getSelectedObjectProperties();
+      if (props) {
+        setSelectedObjectProps(props);
+        setShowPropertyPanel(true);
+      }
+    }
+  };
+
+  const handleAdd3DText = () => {
+    const text = window.prompt('Enter text to place in 3D');
+    if (!text) return;
+    arvrSystemRef.current?.addTextObject(text, parseInt(brushColor.replace('#', ''), 16), null, materialStyle);
+    setIs3DMode(true);
+  };
+
   return (
     <>
       <video ref={videoRef} id="video-input" autoPlay playsInline muted style={{ display: 'none' }}></video>
@@ -412,7 +483,34 @@ function App() {
         <button className="action-btn" onClick={handleDuplicateSelectedShape}>Duplicate Selected</button>
         <button className="action-btn" onClick={handleReplaceSelectedShape}>Replace Selected</button>
         <button className="action-btn" onClick={handleDeleteSelectedShape}>Delete Selected</button>
+        <button className="action-btn" onClick={handleOpenProperties}>Properties</button>
       </div>
+      {showPropertyPanel && (
+        <div style={{ position: 'absolute', bottom: '260px', right: '20px', zIndex: 11, background: 'rgba(0,0,0,0.92)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)', minWidth: '240px' }}>
+          <div style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Object Properties</div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ color: '#aaa', fontSize: '11px' }}>Height: {selectedObjectProps.height.toFixed(2)}x</label>
+            <input type="range" min="0.1" max="4" step="0.1" value={selectedObjectProps.height} onChange={(e) => handleUpdateHeight(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ color: '#aaa', fontSize: '11px' }}>Width: {selectedObjectProps.width.toFixed(2)}x</label>
+            <input type="range" min="0.1" max="4" step="0.1" value={selectedObjectProps.width} onChange={(e) => handleUpdateWidth(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ color: '#aaa', fontSize: '11px' }}>Depth: {selectedObjectProps.depth.toFixed(2)}x</label>
+            <input type="range" min="0.1" max="4" step="0.1" value={selectedObjectProps.depth} onChange={(e) => handleUpdateDepth(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ color: '#aaa', fontSize: '11px' }}>Color</label>
+            <input type="color" value={selectedObjectProps.color} onChange={(e) => handleUpdateColor(e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '6px', border: 'none', cursor: 'pointer' }} />
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ color: '#aaa', fontSize: '11px' }}>Opacity: {(selectedObjectProps.opacity * 100).toFixed(0)}%</label>
+            <input type="range" min="0" max="1" step="0.05" value={selectedObjectProps.opacity} onChange={(e) => handleUpdateOpacity(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <button className="action-btn" onClick={() => setShowPropertyPanel(false)} style={{ width: '100%', padding: '6px 10px', fontSize: '12px' }}>Close</button>
+        </div>
+      )}
       <div id="top-right" onClick={handleClear}>
         <i className="fa-solid fa-arrow-rotate-right"></i>
       </div>
@@ -435,27 +533,26 @@ function App() {
         )}
         {showCloud && sessions.length > 0 && (
           <div style={{ background: 'rgba(0,0,0,0.8)', padding: '8px', borderRadius: '8px', color: 'white', fontSize: '12px' }}>
-            {sessions.map(s => (
+            {sessions.map((s) => (
               <div key={s} style={{ padding: '2px 0', cursor: 'pointer' }} onClick={() => handleSessionClick(s)}>📂 {s}</div>
             ))}
           </div>
         )}
       </div>
-
-      <div id="drawing-tools" style={{ display: !is3DMode ? "flex" : "none", position: "absolute", top: "80px", left: "20px", zIndex: 10, gap: "10px", flexDirection: "column", background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "10px" }}>
-        <label style={{color:"white", fontSize:"12px"}}>Draw Tool</label>
-        <select value={drawingTool} onChange={(e) => setDrawingTool(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
+      <div id="drawing-tools" style={{ display: !is3DMode ? 'flex' : 'none', position: 'absolute', top: '80px', left: '20px', zIndex: 10, gap: '10px', flexDirection: 'column', background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '10px' }}>
+        <label style={{ color: 'white', fontSize: '12px' }}>Draw Tool</label>
+        <select value={drawingTool} onChange={(e) => setDrawingTool(e.target.value)} style={{ padding: '5px', borderRadius: '5px' }}>
           {DRAWING_TOOLS.map((tool) => (
             <option key={tool.value} value={tool.value}>{tool.label}</option>
           ))}
         </select>
-        <label style={{color:"white", fontSize:"12px"}}>Brush Style</label>
-        <select value={brushStyle} onChange={(e) => setBrushStyle(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
+        <label style={{ color: 'white', fontSize: '12px' }}>Brush Style</label>
+        <select value={brushStyle} onChange={(e) => setBrushStyle(e.target.value)} style={{ padding: '5px', borderRadius: '5px' }}>
           {BRUSH_STYLES.map((style) => (
             <option key={style.value} value={style.value}>{style.label}</option>
           ))}
         </select>
-        <label style={{color:"white", fontSize:"12px"}}>Brush Color</label>
+        <label style={{ color: 'white', fontSize: '12px' }}>Brush Color</label>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {COLOR_SWATCHES.map((color) => (
             <button
@@ -466,10 +563,10 @@ function App() {
             />
           ))}
         </div>
-        <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} style={{width:"40px", height:"40px", borderRadius:"50%", border:"none", cursor:"pointer"}}/>
-        <label style={{color:"white", fontSize:"12px"}}>Brush Size: {brushSize}</label>
+        <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', cursor: 'pointer' }} />
+        <label style={{ color: 'white', fontSize: '12px' }}>Brush Size: {brushSize}</label>
         <input type="range" min="2" max="80" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value, 10))} />
-        <button className="action-btn" onClick={() => drawingSystemRef.current?.undo()} style={{padding: "5px 10px", fontSize: "14px"}}>Undo Last</button>
+        <button className="action-btn" onClick={() => drawingSystemRef.current?.undo()} style={{ padding: '5px 10px', fontSize: '14px' }}>Undo Last</button>
       </div>
       <div id="bottom-bar">
       <div id="shape-bar" style={{ display: is3DMode ? 'flex' : 'none', position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, gap: '8px', flexWrap: 'wrap', width: '92%', justifyContent: 'center', alignItems: 'center' }}>
@@ -500,6 +597,14 @@ function App() {
         <button className={`action-btn ${is3DMode ? 'active' : ''}`} onClick={toggle3D}>
           <div className="shutter-icon"><div className="shutter-inner"></div></div>
           3D!
+        </button>
+
+        <button className="action-btn" onClick={() => arvrSystemRef.current?.convertStrokesTo3D(drawingSystemRef.current?.strokes || [])}>
+          2D→3D
+        </button>
+
+        <button className="action-btn" onClick={handleAdd3DText}>
+          Text→3D
         </button>
 
         <div className={`toggle-switch ${isToggled ? 'on' : ''}`} onClick={toggleSwitch}>
