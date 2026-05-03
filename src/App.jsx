@@ -3,12 +3,16 @@ import './index.css';
 import DrawingSystem from './utils/DrawingSystem';
 import TrackingSystem from './utils/TrackingSystem';
 import ARVRSystem from './utils/ARVRSystem';
+import { saveStrokes, loadStrokes, listSessions } from './utils/apiService';
 
 function App() {
   const [isDrawingMode, setIsDrawingMode] = useState(true);
   const [is3DMode, setIs3DMode] = useState(false);
-  const [isToggled, setIsToggled] = useState(false); // Can be used for camera flip or vr bg
-  const [isFrontCam, setIsFrontCam] = useState(false); // Using back camera for AR by default
+  const [isToggled, setIsToggled] = useState(false);
+  const [isFrontCam, setIsFrontCam] = useState(false);
+  const [cloudStatus, setCloudStatus] = useState('');
+  const [sessions, setSessions] = useState([]);
+  const [showCloud, setShowCloud] = useState(false);
 
   // Refs for Canvases
   const videoRef = useRef(null);
@@ -52,7 +56,7 @@ function App() {
       if (vElem && vElem.readyState >= 2 && trackingSystemRef.current) {
         try {
           await trackingSystemRef.current.hands.send({ image: vElem });
-        } catch (e) {
+        } catch {
           // Drop frames silently
         }
       }
@@ -200,7 +204,58 @@ function App() {
 
   const toggleSwitch = () => {
     setIsToggled(!isToggled);
-    setIsFrontCam(!isFrontCam); // Tie toggle to front/back cam flip like Snapchat/IG
+    setIsFrontCam(!isFrontCam);
+  };
+
+  const handleSave = async () => {
+    const strokes = drawingSystemRef.current?.strokes || [];
+    if (strokes.length === 0) { setCloudStatus('Nothing to save.'); return; }
+    try {
+      setCloudStatus('Saving…');
+      await saveStrokes(strokes);
+      setCloudStatus(`✅ Saved ${strokes.length} stroke(s)`);
+    } catch (e) {
+      setCloudStatus(`❌ Save failed: ${e.message}`);
+    }
+  };
+
+  const handleLoad = async () => {
+    try {
+      setCloudStatus('Loading…');
+      const strokes = await loadStrokes();
+      if (!strokes.length) { setCloudStatus('No saved drawing found.'); return; }
+      if (drawingSystemRef.current) {
+        drawingSystemRef.current.strokes = strokes;
+        drawingSystemRef.current.renderAll();
+      }
+      setCloudStatus(`✅ Loaded ${strokes.length} stroke(s)`);
+    } catch (e) {
+      setCloudStatus(`❌ Load failed: ${e.message}`);
+    }
+  };
+
+  const handleShowSessions = async () => {
+    try {
+      const list = await listSessions();
+      setSessions(list);
+      setShowCloud(s => !s);
+    } catch (e) {
+      setCloudStatus(`❌ ${e.message}`);
+    }
+  };
+
+  const handleSessionClick = async (sessionName) => {
+    try {
+      const sk = await loadStrokes(sessionName);
+      if (drawingSystemRef.current) {
+        drawingSystemRef.current.strokes = sk;
+        drawingSystemRef.current.renderAll();
+      }
+      setCloudStatus(`✅ Loaded "${sessionName}"`);
+      setShowCloud(false);
+    } catch (e) {
+      setCloudStatus(`❌ Load failed: ${e.message}`);
+    }
   };
 
   return (
@@ -226,6 +281,31 @@ function App() {
       </div>
       <div id="top-right" onClick={handleClear}>
         <i className="fa-solid fa-arrow-rotate-right"></i>
+      </div>
+
+      {/* Cloud Save/Load panel */}
+      <div id="cloud-bar" style={{ position: 'absolute', top: '40px', right: '60px', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="action-btn cloud-btn" onClick={handleSave} title="Save to server">
+            <i className="fa-solid fa-cloud-arrow-up" style={{ marginRight: '4px' }}></i>Save
+          </button>
+          <button className="action-btn cloud-btn" onClick={handleLoad} title="Load from server">
+            <i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: '4px' }}></i>Load
+          </button>
+          <button className="action-btn cloud-btn" onClick={handleShowSessions} title="Saved sessions">
+            <i className="fa-solid fa-list" style={{ marginRight: '4px' }}></i>Sessions
+          </button>
+        </div>
+        {cloudStatus && (
+          <span style={{ color: 'white', fontSize: '12px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '6px' }}>{cloudStatus}</span>
+        )}
+        {showCloud && sessions.length > 0 && (
+          <div style={{ background: 'rgba(0,0,0,0.8)', padding: '8px', borderRadius: '8px', color: 'white', fontSize: '12px' }}>
+            {sessions.map(s => (
+              <div key={s} style={{ padding: '2px 0', cursor: 'pointer' }} onClick={() => handleSessionClick(s)}>📂 {s}</div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div id="drawing-tools" style={{ display: !is3DMode ? "flex" : "none", position: "absolute", top: "80px", left: "20px", zIndex: 10, gap: "10px", flexDirection: "column", background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "10px" }}>

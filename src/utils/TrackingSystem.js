@@ -1,7 +1,7 @@
 export default class TrackingSystem {
     constructor(onGesture) {
         this.onGesture = onGesture;
-        this.hands = new window.Hands({locateFile: file => "https://cdn.jsdelivr.net/npm/@mediapipe/hands/$file"});
+        this.hands = new window.Hands({locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
         
         this.hands.setOptions({
             maxNumHands: 2, // Enable two hands for max/min & rotate

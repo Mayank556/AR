@@ -135,3 +135,21 @@ canvas {
   font-size: 24px;
   cursor: pointer;
 }
+
+.cloud-btn {
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cloud-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
