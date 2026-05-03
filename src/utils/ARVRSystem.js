@@ -197,7 +197,7 @@ export default class ARVRSystem {
         this.transformControl.attach(root);
     }
 
-    replaceSelectedShape(type, color) {
+    replaceSelectedShape(type, color, finish = 'gloss') {
         const selected = this.selectedObject;
         if (!selected) return null;
 
@@ -208,7 +208,7 @@ export default class ARVRSystem {
         const shapeColor = color ?? selected.userData?.colorHex ?? 0xffffff;
 
         this.removeObject(selected);
-        const replacement = this.addShape(shapeType, shapeColor, position);
+        const replacement = this.addShape(shapeType, shapeColor, position, finish);
         replacement.rotation.copy(rotation);
         replacement.scale.copy(scale);
         this.focusObject(replacement);
@@ -229,6 +229,21 @@ export default class ARVRSystem {
         if(this.animationId) cancelAnimationFrame(this.animationId);
         this.controls.dispose();
         this.transformControl.dispose();
+    }
+
+    buildMaterial(color, finish = 'gloss') {
+        const baseColor = new THREE.Color(color || 0xffffff);
+        switch (finish) {
+            case 'matte':
+                return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.95, metalness: 0.02 });
+            case 'metal':
+                return new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.25, metalness: 0.95 });
+            case 'glass':
+                return new THREE.MeshPhysicalMaterial({ color: baseColor, roughness: 0.1, metalness: 0.05, transmission: 0.7, transparent: true, opacity: 0.75, clearcoat: 1 });
+            case 'gloss':
+            default:
+                return new THREE.MeshPhongMaterial({ color: baseColor, shininess: 120, specular: 0xffffff });
+        }
     }
 
     removeObject(object) {
@@ -370,6 +385,90 @@ export default class ARVRSystem {
                 mesh = group;
                 break;
             }
+            case 'flower': {
+                const center = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 16), new THREE.MeshPhongMaterial({ color: 0xfacc15 }));
+                const petalMaterial = new THREE.MeshPhongMaterial({ color: 0xff6b6b });
+                for (let i = 0; i < 6; i++) {
+                    const petal = new THREE.Mesh(new THREE.SphereGeometry(3.2, 16, 12), petalMaterial);
+                    const angle = (Math.PI * 2 / 6) * i;
+                    petal.position.set(Math.cos(angle) * 6, Math.sin(angle) * 3, Math.sin(angle) * 6);
+                    group.add(petal);
+                }
+                group.add(center);
+                mesh = group;
+                break;
+            }
+            case 'star': {
+                const shape = new THREE.Shape();
+                for (let i = 0; i < 10; i++) {
+                    const angle = (Math.PI / 5) * i - Math.PI / 2;
+                    const radius = i % 2 === 0 ? 10 : 4.5;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    if (i === 0) shape.moveTo(x, y);
+                    else shape.lineTo(x, y);
+                }
+                shape.closePath();
+                mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 4, bevelEnabled: true, bevelThickness: 1, bevelSize: 0.7 }), material);
+                break;
+            }
+            case 'shield': {
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 14);
+                shape.lineTo(-10, 10);
+                shape.lineTo(-8, -8);
+                shape.lineTo(0, -14);
+                shape.lineTo(8, -8);
+                shape.lineTo(10, 10);
+                shape.closePath();
+                mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 5, bevelEnabled: true, bevelThickness: 1, bevelSize: 0.6 }), material);
+                break;
+            }
+            case 'arrow': {
+                const shape = new THREE.Shape();
+                shape.moveTo(-10, -4);
+                shape.lineTo(2, -4);
+                shape.lineTo(2, -10);
+                shape.lineTo(14, 0);
+                shape.lineTo(2, 10);
+                shape.lineTo(2, 4);
+                shape.lineTo(-10, 4);
+                shape.closePath();
+                mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 4, bevelEnabled: true, bevelThickness: 1, bevelSize: 0.5 }), material);
+                break;
+            }
+            case 'leaf': {
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 16);
+                shape.quadraticCurveTo(14, 8, 10, 0);
+                shape.quadraticCurveTo(14, -8, 0, -16);
+                shape.quadraticCurveTo(-14, -8, -10, 0);
+                shape.quadraticCurveTo(-14, 8, 0, 16);
+                mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 3, bevelEnabled: true, bevelThickness: 0.7, bevelSize: 0.4 }), material);
+                break;
+            }
+            case 'moon': {
+                const outer = new THREE.Mesh(new THREE.SphereGeometry(10, 24, 16), material);
+                const inner = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 16), new THREE.MeshPhongMaterial({ color: 0x000000 }));
+                inner.position.set(4, 0, 0);
+                group.add(outer, inner);
+                mesh = group;
+                break;
+            }
+            case 'sun': {
+                const core = new THREE.Mesh(new THREE.SphereGeometry(7, 24, 16), new THREE.MeshPhongMaterial({ color: 0xffd60a }));
+                group.add(core);
+                for (let i = 0; i < 8; i++) {
+                    const ray = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 12, 8), new THREE.MeshPhongMaterial({ color: 0xffb703 }));
+                    const angle = (Math.PI * 2 / 8) * i;
+                    ray.rotation.z = Math.PI / 2;
+                    ray.position.set(Math.cos(angle) * 12, Math.sin(angle) * 12, 0);
+                    ray.rotation.y = angle;
+                    group.add(ray);
+                }
+                mesh = group;
+                break;
+            }
             default:
                 break;
         }
@@ -438,6 +537,21 @@ export default class ARVRSystem {
             case 'pill':
                 geometry = new THREE.CapsuleGeometry(7, 18, 6, 16);
                 break;
+            case 'arch':
+                geometry = new THREE.TorusGeometry(10, 4, 12, 24, Math.PI);
+                break;
+            case 'wave':
+                geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+                    new THREE.Vector3(-12, 0, 0),
+                    new THREE.Vector3(-6, 8, 0),
+                    new THREE.Vector3(0, -8, 0),
+                    new THREE.Vector3(6, 8, 0),
+                    new THREE.Vector3(12, 0, 0)
+                ]), 48, 1.2, 8, false);
+                break;
+            case 'cross':
+                geometry = new THREE.BoxGeometry(6, 24, 6);
+                break;
             default:
                 geometry = new THREE.BoxGeometry(10, 10, 10);
                 break;
@@ -446,7 +560,7 @@ export default class ARVRSystem {
         return new THREE.Mesh(geometry, material);
     }
 
-    addShape(type, color, position = null) {
+    addShape(type, color, position = null, finish = 'gloss') {
         if (!position) {
             position = {
                 x: (Math.random() - 0.5) * 50,
@@ -455,7 +569,7 @@ export default class ARVRSystem {
             };
         }
         this.is3DMode = true;
-        const material = new THREE.MeshPhongMaterial({ color: color || Math.random() * 0xffffff });
+        const material = this.buildMaterial(color || Math.random() * 0xffffff, finish);
         let mesh;
 
         const composite = this.createCompositeMesh(type.toLowerCase(), material);

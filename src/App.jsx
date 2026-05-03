@@ -24,6 +24,18 @@ const BRUSH_STYLES = [
   { label: 'Square', value: 'square' }
 ];
 
+const COLOR_SWATCHES = [
+  '#8b5a2b', '#ef4444', '#f59e0b', '#eab308', '#22c55e',
+  '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff'
+];
+
+const MATERIAL_PRESETS = [
+  { label: 'Matte', value: 'matte' },
+  { label: 'Gloss', value: 'gloss' },
+  { label: 'Metal', value: 'metal' },
+  { label: 'Glass', value: 'glass' }
+];
+
 const SHAPE_3D_OPTIONS = [
   { label: 'Cube', value: 'box' },
   { label: 'Sphere', value: 'sphere' },
@@ -47,7 +59,17 @@ const SHAPE_3D_OPTIONS = [
   { label: 'Table', value: 'table' },
   { label: 'Dodecahedron', value: 'dodecahedron' },
   { label: 'Icosahedron', value: 'icosahedron' },
-  { label: 'Octahedron', value: 'octahedron' }
+  { label: 'Octahedron', value: 'octahedron' },
+  { label: 'Flower', value: 'flower' },
+  { label: 'Star', value: 'star' },
+  { label: 'Shield', value: 'shield' },
+  { label: 'Arrow', value: 'arrow' },
+  { label: 'Leaf', value: 'leaf' },
+  { label: 'Moon', value: 'moon' },
+  { label: 'Sun', value: 'sun' },
+  { label: 'Arch', value: 'arch' },
+  { label: 'Wave', value: 'wave' },
+  { label: 'Cross', value: 'cross' }
 ];
 
 function App() {
@@ -63,6 +85,7 @@ function App() {
   const [brushStyle, setBrushStyle] = useState('bead');
   const [drawingTool, setDrawingTool] = useState('pen');
   const [selected3DShape, setSelected3DShape] = useState('box');
+  const [materialStyle, setMaterialStyle] = useState('gloss');
 
   // Refs for Canvases
   const videoRef = useRef(null);
@@ -338,7 +361,7 @@ function App() {
       octahedron: 0x3b82f6
     };
 
-    arvrSystemRef.current?.addShape(shape, palette[shape] ?? 0xffffff);
+    arvrSystemRef.current?.addShape(shape, palette[shape] ?? 0xffffff, null, materialStyle);
   };
 
   const handleDuplicateSelectedShape = () => {
@@ -357,7 +380,13 @@ function App() {
   const handleReplaceSelectedShape = () => {
     const arvr = arvrSystemRef.current;
     if (!arvr?.selectedObject) return;
-    arvr.replaceSelectedShape(selected3DShape, undefined);
+    arvr.replaceSelectedShape(selected3DShape, undefined, materialStyle);
+  };
+
+  const handleDeleteSelectedShape = () => {
+    const arvr = arvrSystemRef.current;
+    if (!arvr?.selectedObject) return;
+    arvr.removeObject(arvr.selectedObject);
   };
 
   return (
@@ -382,6 +411,7 @@ function App() {
         <button className="action-btn" onClick={() => arvrSystemRef.current?.setTransformMode("scale")}>Scale Output</button>
         <button className="action-btn" onClick={handleDuplicateSelectedShape}>Duplicate Selected</button>
         <button className="action-btn" onClick={handleReplaceSelectedShape}>Replace Selected</button>
+        <button className="action-btn" onClick={handleDeleteSelectedShape}>Delete Selected</button>
       </div>
       <div id="top-right" onClick={handleClear}>
         <i className="fa-solid fa-arrow-rotate-right"></i>
@@ -426,6 +456,16 @@ function App() {
           ))}
         </select>
         <label style={{color:"white", fontSize:"12px"}}>Brush Color</label>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {COLOR_SWATCHES.map((color) => (
+            <button
+              key={color}
+              onClick={() => setBrushColor(color)}
+              title={color}
+              style={{ width: '24px', height: '24px', borderRadius: '999px', border: color === brushColor ? '2px solid white' : '1px solid rgba(255,255,255,0.35)', background: color, cursor: 'pointer' }}
+            />
+          ))}
+        </div>
         <input type="color" value={brushColor} onChange={(e) => setBrushColor(e.target.value)} style={{width:"40px", height:"40px", borderRadius:"50%", border:"none", cursor:"pointer"}}/>
         <label style={{color:"white", fontSize:"12px"}}>Brush Size: {brushSize}</label>
         <input type="range" min="2" max="80" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value, 10))} />
@@ -437,6 +477,12 @@ function App() {
           <select value={selected3DShape} onChange={(e) => setSelected3DShape(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
             {SHAPE_3D_OPTIONS.map((shape) => (
               <option key={shape.value} value={shape.value}>{shape.label}</option>
+            ))}
+          </select>
+          <label style={{color:"white", fontSize:"12px"}}>Material</label>
+          <select value={materialStyle} onChange={(e) => setMaterialStyle(e.target.value)} style={{padding:"5px", borderRadius:"5px"}}>
+            {MATERIAL_PRESETS.map((material) => (
+              <option key={material.value} value={material.value}>{material.label}</option>
             ))}
           </select>
           <button className="action-btn" onClick={handleAdd3DShape}>Add Shape</button>
