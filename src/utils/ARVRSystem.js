@@ -3,7 +3,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 export default class ARVRSystem {
-    constructor(threeCanvas, bgCanvas) {
+    constructor(threeCanvas) {
         this.threeCanvas = threeCanvas;
         this.scene = new THREE.Scene();
         
@@ -86,14 +86,12 @@ export default class ARVRSystem {
         this.controls.update();
         this.objects3D.forEach(obj => {
             if (this.transformControl.object !== obj) {
-                // Idle animation: slight bob or rotation 
                 obj.rotation.y += 0.01;
             }
-        }); // for damping
+        });
         this.renderer.render(this.scene, this.camera);
     }
-    
-    $code
+
     setTransformMode(mode) {
         this.transformControl.setMode(mode);
     }
@@ -132,7 +130,7 @@ export default class ARVRSystem {
 
         switch (type.toLowerCase()) {
             case 'house':
-            case 'building':
+            case 'building': {
                 const boxGeo = new THREE.BoxGeometry(20, 20, 20);
                 const roofGeo = new THREE.ConeGeometry(15, 10, 4);
                 const box = new THREE.Mesh(boxGeo, material);
@@ -143,7 +141,8 @@ export default class ARVRSystem {
                 group.add(roof);
                 mesh = group;
                 break;
-            case 'tree':
+            }
+            case 'tree': {
                 const trunkGeo = new THREE.CylinderGeometry(2, 2, 10);
                 const leavesGeo = new THREE.SphereGeometry(10);
                 const trunk = new THREE.Mesh(trunkGeo, new THREE.MeshPhongMaterial({color: 0x8B4513}));
@@ -153,8 +152,9 @@ export default class ARVRSystem {
                 group.add(leaves);
                 mesh = group;
                 break;
+            }
             case 'vehicle':
-            case 'car':
+            case 'car': {
                 const bodyGeo = new THREE.BoxGeometry(30, 10, 15);
                 const topGeo = new THREE.BoxGeometry(15, 8, 14);
                 const body = new THREE.Mesh(bodyGeo, material);
@@ -164,7 +164,8 @@ export default class ARVRSystem {
                 group.add(topP);
                 mesh = group;
                 break;
-            case 'human':
+            }
+            case 'human': {
                 const headGeo = new THREE.SphereGeometry(4);
                 const torsoGeo = new THREE.CylinderGeometry(4, 4, 12);
                 const head = new THREE.Mesh(headGeo, material);
@@ -174,6 +175,7 @@ export default class ARVRSystem {
                 group.add(head);
                 mesh = group;
                 break;
+            }
             // Additional basic standard geometry types (Simulating "50+ shapes")
             case 'box':
             case 'cube':
@@ -247,78 +249,44 @@ export default class ARVRSystem {
     clear3D() {
         this.objects3D.forEach(obj => {
             this.scene.remove(obj);
-            if (obj.geometry) obj.geometry.dispose();
-            if (obj.material) obj.material.dispose();
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    child.geometry?.dispose();
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material?.dispose();
+                }
+            });
         });
         this.objects3D = [];
         this.transformControl.detach();
     }
-}
-                leaves.position.y = 8;
-                group.add(trunk);
-                group.add(leaves);
-                mesh = group;
-                break;
-            case 'vehicle':
-            case 'car':
-                const carBodyGeom = new THREE.BoxGeometry(30, 10, 15);
-                const carTopGeom = new THREE.BoxGeometry(15, 8, 12);
-                const carBody = new THREE.Mesh(carBodyGeom, material);
-                const carTop = new THREE.Mesh(carTopGeom, new THREE.MeshPhongMaterial({color: 0xffffff}));
-                carTop.position.y = 9;
-                group.add(carBody, carTop);
-                // Wheels
-                for(let i=0; i<4; i++) {
-                    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(4,4,2), new THREE.MeshPhongMaterial({color:0x111111}));
-                    wheel.rotation.x = Math.PI/2;
-                    wheel.position.set(i<2?-10:10, -5, i%2===0?8:-8);
-                    group.add(wheel);
-                }
-                mesh = group;
-                break;
-            case 'human':
-                // simple stick figure/block human
-                const head = new THREE.Mesh(new THREE.SphereGeometry(4), new THREE.MeshPhongMaterial({color:0xffccaa}));
-                head.position.y = 15;
-                const body = new THREE.Mesh(new THREE.BoxGeometry(8, 12, 4), material);
-                body.position.y = 5;
-                group.add(head, body);
-                mesh = group;
-                break;
-            case 'circle':
-            case 'sphere':
-                geometry = new THREE.SphereGeometry(15, 32, 32);
-                mesh = new THREE.Mesh(geometry, material);
-                break;
-            case 'rectangle':
-            case 'box':
-            case 'cube':
-                geometry = new THREE.BoxGeometry(20, 20, 20);
-                mesh = new THREE.Mesh(geometry, material);
-                break;
-            case 'triangle':
-            case 'cone':
-                geometry = new THREE.ConeGeometry(15, 20, 3);
-                mesh = new THREE.Mesh(geometry, material);
-                break;
-            default:
-                geometry = new THREE.BoxGeometry(10, 10, 10);
-                mesh = new THREE.Mesh(geometry, material);
-                break;
-        }
 
-        mesh.position.set(position.x, position.y, position.z);
-        this.group.add(mesh);
-        mesh.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                // Upgrade to premium physical-like materials
-                if (child.material) {
-                    child.material.shininess = 100;
-                }
-            }
+    convertStrokesTo3D(strokes) {
+        if (!strokes || strokes.length === 0) return;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        strokes.forEach((stroke) => {
+            if (!stroke.points || stroke.points.length < 2) return;
+
+            const points = stroke.points.map((p) => {
+                const nx = ((p.x / w) - 0.5) * 200;
+                const ny = -((p.y / h) - 0.5) * 100;
+                return new THREE.Vector3(nx, ny, 0);
+            });
+
+            const curve = new THREE.CatmullRomCurve3(points);
+            const tubeRadius = Math.max(0.5, (stroke.baseSize || 6) * 0.15);
+            const geometry = new THREE.TubeGeometry(curve, points.length * 2, tubeRadius, 8, false);
+            const color = stroke.color && stroke.color !== 'erase' ? new THREE.Color(stroke.color) : new THREE.Color(0x8b5a2b);
+            const material = new THREE.MeshPhongMaterial({ color, shininess: 80 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            this.scene.add(mesh);
+            this.objects3D.push(mesh);
         });
-        this.objects3D.push(mesh);
+
+        this.is3DMode = true;
     }
 }
